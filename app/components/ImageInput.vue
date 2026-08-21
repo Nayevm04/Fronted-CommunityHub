@@ -1,9 +1,7 @@
 <script setup lang="ts">
-// Input de imagen: por URL o archivo. Emite la ruta final lista para guardar.
 const props = defineProps<{
   modelValue: string | null | undefined
   label?: string
-  // Subcarpeta del backend donde se guarda el archivo subido (profiles, events)
   folder?: 'profiles' | 'events'
 }>()
 
@@ -71,55 +69,205 @@ const clearImage = () => {
 </script>
 
 <template>
-  <div class="form-field">
-    <label>{{ label || 'Imagen' }}</label>
+  <div class="form-field image-input-container">
+    <label class="image-input-label">{{ label || 'Imagen' }}</label>
 
-    <div class="image-mode-toggle">
-      <label><input v-model="mode" type="radio" value="url" /> Usar URL</label>
-      <label><input v-model="mode" type="radio" value="file" /> Subir archivo</label>
+    <div class="mode-segmented-control">
+      <button
+        type="button"
+        class="mode-pill"
+        :class="{ active: mode === 'url' }"
+        @click="mode = 'url'"
+      >
+        Usar URL externa
+      </button>
+      <button
+        type="button"
+        class="mode-pill"
+        :class="{ active: mode === 'file' }"
+        @click="mode = 'file'"
+      >
+        Subir archivo
+      </button>
     </div>
 
-    <input
-      v-if="mode === 'url'"
-      v-model="urlValue"
-      type="url"
-      placeholder="https://..."
-      @input="handleUrlInput"
-    />
-    <input
-      v-else
-      ref="fileInputRef"
-      type="file"
-      accept="image/jpeg,image/png,image/webp"
-      @change="handleFileChange"
-    />
+    <!-- Mode inputs (keeping hidden inputs bound to v-model for radios if needed, or visual pills) -->
+    <div style="display: none;">
+      <input v-model="mode" type="radio" value="url" />
+      <input v-model="mode" type="radio" value="file" />
+    </div>
 
-    <p v-if="uploading">Subiendo imagen...</p>
+    <div v-if="mode === 'url'" class="input-url-box">
+      <input
+        v-model="urlValue"
+        type="url"
+        placeholder="https://ejemplo.com/imagen.jpg"
+        @input="handleUrlInput"
+      />
+    </div>
+
+    <div v-else class="input-file-box">
+      <input
+        ref="fileInputRef"
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        class="file-input-hidden"
+        id="file-upload-input"
+        @change="handleFileChange"
+      />
+      <label for="file-upload-input" class="file-upload-dropzone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+        <span>Elegir imagen de tu dispositivo</span>
+        <small>Formataos soportados: JPG, PNG, WEBP (máx. 5MB)</small>
+      </label>
+    </div>
+
+    <p v-if="uploading" class="uploading-state">Subiendo imagen a la plataforma...</p>
     <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
-    <div v-if="previewSrc && !previewError" class="image-preview">
-      <img :src="previewSrc" alt="Vista previa" @error="previewError = true" />
+    <div v-if="previewSrc && !previewError" class="preview-card">
+      <div class="preview-header">
+        <span>Vista previa</span>
+        <button type="button" class="btn btn-secondary btn-sm" @click="clearImage">
+          Quitar imagen
+        </button>
+      </div>
+      <div class="preview-image-box">
+        <img :src="previewSrc" alt="Vista previa" @error="previewError = true" />
+      </div>
     </div>
-    <p v-else-if="previewSrc && previewError" class="error-message">No se pudo cargar la imagen.</p>
 
-    <button v-if="modelValue" type="button" class="btn btn-secondary" @click="clearImage">
-      Quitar imagen
-    </button>
+    <p v-else-if="previewSrc && previewError" class="error-message">No se pudo cargar la vista previa de la imagen.</p>
   </div>
 </template>
 
 <style scoped>
-.image-mode-toggle {
-  display: flex;
-  gap: 1rem;
-  font-weight: normal;
+.image-input-container {
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+}
+
+.image-input-label {
+  font-weight: 700 !important;
+  font-size: 0.95rem !important;
+  color: var(--text-main);
   margin-bottom: 0.5rem;
 }
-.image-preview img {
-  max-width: 160px;
-  max-height: 160px;
-  border-radius: 6px;
+
+.mode-segmented-control {
+  display: flex;
+  background: var(--bg-muted);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  gap: 4px;
+  margin-bottom: 1rem;
+}
+
+.mode-pill {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.mode-pill.active {
+  background: var(--bg-surface);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.file-input-hidden {
+  display: none;
+}
+
+.file-upload-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed #cbd5e1;
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  background: var(--bg-surface);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+  gap: 0.35rem;
+}
+
+.file-upload-dropzone:hover {
+  border-color: var(--primary);
+  background: var(--primary-subtle);
+}
+
+.file-upload-dropzone svg {
+  width: 28px;
+  height: 28px;
+  color: var(--primary);
+}
+
+.file-upload-dropzone span {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+.file-upload-dropzone small {
+  font-size: 0.775rem;
+}
+
+.uploading-state {
+  font-size: 0.85rem;
+  color: var(--primary);
+  font-weight: 600;
   margin-top: 0.5rem;
+}
+
+.preview-card {
+  margin-top: 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  font-size: 0.825rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.preview-image-box {
+  width: 100%;
+  max-height: 180px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-image-box img {
+  width: 100%;
+  max-height: 180px;
   object-fit: cover;
 }
 </style>

@@ -87,64 +87,93 @@ const confirmDelete = async () => {
 </script>
 
 <template>
-  <div>
-    <h1>Categorías</h1>
+  <div class="admin-categories-page">
+    <div class="page-header">
+      <h1 class="page-title">Gestión de Categorías</h1>
+      <p class="page-subtitle">Administrá las categorías utilizadas para organizar las actividades comunitarias</p>
+    </div>
 
-    <div class="card">
-      <h2>Nueva categoría</h2>
-      <form @submit.prevent="handleCreate">
+    <div class="card form-card">
+      <h2 class="form-card-title">Nueva categoría</h2>
+      <form @submit.prevent="handleCreate" class="inline-form-grid">
         <div class="form-field">
           <label for="name">Nombre</label>
-          <input id="name" v-model="form.name" type="text" required />
+          <input id="name" v-model="form.name" type="text" placeholder="Ej. Deportes, Cultura, Educación" required />
         </div>
         <div class="form-field">
           <label for="description">Descripción (opcional)</label>
-          <input id="description" v-model="form.description" type="text" />
+          <input id="description" v-model="form.description" type="text" placeholder="Breve descripción de la categoría" />
         </div>
-        <p v-if="formError" class="error-message">{{ formError }}</p>
-        <button class="btn" type="submit" :disabled="creating">+ Nueva categoría</button>
+        <div class="form-field form-button-align">
+          <button class="btn" type="submit" :disabled="creating">+ Agregar categoría</button>
+        </div>
       </form>
+      <p v-if="formError" class="error-message">{{ formError }}</p>
     </div>
 
     <p v-if="rowError" class="error-message">{{ rowError }}</p>
-    <p v-if="pending">Cargando...</p>
-    <p v-else-if="!data?.categories.length">Todavía no hay categorías creadas.</p>
 
-    <table v-else class="card">
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>Descripción</th>
-          <th>Estado</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="cat in data?.categories" :key="cat._id">
-          <template v-if="editingId === cat._id">
-            <td><input v-model="editForm.name" type="text" /></td>
-            <td><input v-model="editForm.description" type="text" /></td>
-            <td><span class="badge">{{ cat.isActive ? 'activa' : 'inactiva' }}</span></td>
-            <td>
-              <button class="btn" @click="saveEdit(cat._id)">Guardar</button>
-              <button class="btn btn-secondary" @click="cancelEdit">Cancelar</button>
-            </td>
-          </template>
-          <template v-else>
-            <td>{{ cat.name }}</td>
-            <td>{{ cat.description }}</td>
-            <td><span class="badge">{{ cat.isActive ? 'activa' : 'inactiva' }}</span></td>
-            <td>
-              <button class="btn" @click="startEdit(cat)">Editar</button>
-              <button class="btn btn-secondary" @click="handleToggleActive(cat)">
-                {{ cat.isActive ? 'Desactivar' : 'Activar' }}
-              </button>
-              <button class="btn btn-danger" @click="askDelete(cat)">Eliminar</button>
-            </td>
-          </template>
-        </tr>
-      </tbody>
-    </table>
+    <div v-if="pending" class="state-container">
+      <div class="spinner"></div>
+      <p>Cargando categorías...</p>
+    </div>
+    <div v-else-if="!data?.categories.length" class="empty-state card">
+      <h3>Todavía no hay categorías creadas.</h3>
+    </div>
+
+    <div v-else class="table-container">
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Descripción</th>
+            <th>Estado</th>
+            <th style="text-align: right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="cat in data?.categories" :key="cat._id">
+            <template v-if="editingId === cat._id">
+              <td>
+                <input v-model="editForm.name" type="text" class="table-input" />
+              </td>
+              <td>
+                <input v-model="editForm.description" type="text" class="table-input" />
+              </td>
+              <td>
+                <span class="badge" :class="cat.isActive ? 'badge-success' : 'badge-muted'">
+                  {{ cat.isActive ? 'activa' : 'inactiva' }}
+                </span>
+              </td>
+              <td>
+                <div class="table-actions-group right">
+                  <button class="btn btn-sm" @click="saveEdit(cat._id)">Guardar</button>
+                  <button class="btn btn-secondary btn-sm" @click="cancelEdit">Cancelar</button>
+                </div>
+              </td>
+            </template>
+            <template v-else>
+              <td><strong>{{ cat.name }}</strong></td>
+              <td><span class="table-desc">{{ cat.description || '—' }}</span></td>
+              <td>
+                <span class="badge" :class="cat.isActive ? 'badge-success' : 'badge-muted'">
+                  {{ cat.isActive ? 'activa' : 'inactiva' }}
+                </span>
+              </td>
+              <td>
+                <div class="table-actions-group right">
+                  <button class="btn btn-secondary btn-sm" @click="startEdit(cat)">Editar</button>
+                  <button class="btn btn-secondary btn-sm" @click="handleToggleActive(cat)">
+                    {{ cat.isActive ? 'Desactivar' : 'Activar' }}
+                  </button>
+                  <button class="btn btn-danger btn-sm" @click="askDelete(cat)">Eliminar</button>
+                </div>
+              </td>
+            </template>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <ConfirmDialog
       :open="!!deleteTarget"
@@ -155,3 +184,124 @@ const confirmDelete = async () => {
     />
   </div>
 </template>
+
+<style scoped>
+.admin-categories-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.page-title {
+  margin-bottom: 0.25rem;
+}
+
+.page-subtitle {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.form-card-title {
+  font-size: 1.15rem;
+  margin-bottom: 1rem;
+}
+
+.inline-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr auto;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.form-button-align {
+  margin-bottom: 1.25rem;
+}
+
+.modern-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-surface);
+}
+
+.modern-table th,
+.modern-table td {
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.9rem;
+}
+
+.modern-table th {
+  background: var(--bg-muted);
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.table-desc {
+  color: var(--text-muted);
+}
+
+.table-input {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  width: 100%;
+}
+
+.table-actions-group {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.table-actions-group.right {
+  justify-content: flex-end;
+}
+
+.badge-muted {
+  background: var(--status-muted-bg);
+  color: var(--status-muted-text);
+  border-color: var(--status-muted-border);
+}
+
+.badge-success {
+  background: var(--status-active-bg);
+  color: var(--status-active-text);
+  border-color: var(--status-active-border);
+}
+
+.state-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 3rem;
+  color: var(--text-muted);
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .inline-form-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .form-button-align {
+    margin-bottom: 1.25rem;
+  }
+}
+</style>

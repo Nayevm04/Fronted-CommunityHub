@@ -14,10 +14,11 @@ export default defineNuxtConfig({
       // @vite-pwa/nuxt no inyecta el link del manifest ni el theme-color automaticamente
       // en esta version: hace falta agregarlos a mano para que el navegador reconozca la PWA.
       link: [
-        { rel: 'icon', type: 'image/png', href: '/icons/icon-192.png' },
+        { rel: 'icon', type: 'image/png', href: '/favicon.png' },
+        { rel: 'shortcut icon', href: '/favicon.ico' },
         { rel: 'manifest', href: '/manifest.webmanifest' },
       ],
-      meta: [{ name: 'theme-color', content: '#2563eb' }],
+      meta: [{ name: 'theme-color', content: '#4f46e5' }],
     },
   },
   // Evita "composable called outside of a plugin..." cuando el store de Pinia
@@ -45,9 +46,9 @@ export default defineNuxtConfig({
       lang: 'es',
       start_url: '/',
       display: 'standalone',
-      // Mismos colores que ya usa la app (.btn y body en assets/css/main.css)
-      theme_color: '#2563eb',
-      background_color: '#f4f5f7',
+      // Mismos colores que usa la app (.btn y body en assets/css/main.css)
+      theme_color: '#4f46e5',
+      background_color: '#f8fafc',
       icons: [
         { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
         { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
