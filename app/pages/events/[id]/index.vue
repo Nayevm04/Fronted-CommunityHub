@@ -3,9 +3,10 @@ import type { EventItem } from '~/types/models'
 
 const route = useRoute()
 const authStore = useAuthStore()
+const registrationsStore = useRegistrationsStore()
 const { apiFetch } = useApi()
 
-const { data, pending, error } = await useAsyncData(`event-${route.params.id}`, () =>
+const { data, pending, error, refresh } = await useAsyncData(`event-${route.params.id}`, () =>
   apiFetch<{ event: EventItem }>(`/events/${route.params.id}`)
 )
 
@@ -15,6 +16,69 @@ const isOwner = computed(
 const canManage = computed(
   () => (isOwner.value || authStore.isAdmin) && data.value?.event.status !== 'completed'
 )
+
+onMounted(() => {
+  if (authStore.isAuthenticated) {
+    registrationsStore.fetchMyRegistrations()
+  }
+})
+
+const isRegistered = computed(
+  () => !!data.value && registrationsStore.isRegistered(data.value.event._id)
+)
+const availableSpots = computed(() => {
+  if (!data.value) return 0
+  return data.value.event.capacity - (data.value.event.registeredCount ?? 0)
+})
+const isFull = computed(() => availableSpots.value <= 0)
+const canRegister = computed(
+  () => data.value?.event.status === 'active' && !isRegistered.value && !isFull.value
+)
+
+const registering = ref(false)
+const cancelling = ref(false)
+const registerMessage = ref('')
+const registerError = ref('')
+const showCancelConfirm = ref(false)
+
+const handleRegister = async () => {
+  if (!data.value) return
+  registerMessage.value = ''
+  registerError.value = ''
+  registering.value = true
+  const ok = await registrationsStore.register(data.value.event._id)
+  registering.value = false
+  if (ok) {
+    registerMessage.value = 'Te inscribiste correctamente en esta actividad'
+    await refresh()
+  } else {
+    registerError.value = registrationsStore.error || 'No se pudo completar la inscripción'
+  }
+}
+
+const askCancelRegistration = () => {
+  registerMessage.value = ''
+  registerError.value = ''
+  showCancelConfirm.value = true
+}
+
+const closeCancelConfirm = () => {
+  showCancelConfirm.value = false
+}
+
+const confirmCancelRegistration = async () => {
+  if (!data.value) return
+  showCancelConfirm.value = false
+  cancelling.value = true
+  const ok = await registrationsStore.cancelRegistration(data.value.event._id)
+  cancelling.value = false
+  if (ok) {
+    registerMessage.value = 'Cancelaste tu inscripción en esta actividad'
+    await refresh()
+  } else {
+    registerError.value = registrationsStore.error || 'No se pudo cancelar la inscripción'
+  }
+}
 </script>
 
 <template>
@@ -100,8 +164,11 @@ const canManage = computed(
               </svg>
             </div>
             <div>
-              <span class="info-label">Capacidad Máxima</span>
-              <p class="info-value">{{ data.event.capacity }} personas</p>
+              <span class="info-label">Capacidad</span>
+              <p class="info-value">
+                {{ data.event.registeredCount ?? 0 }} / {{ data.event.capacity }} inscritos
+                — {{ Math.max(availableSpots, 0) }} espacios disponibles
+              </p>
             </div>
           </div>
 
@@ -124,6 +191,41 @@ const canManage = computed(
           <p class="description-text">{{ data.event.description }}</p>
         </div>
 
+        <div v-if="data.event.status === 'active'" class="registration-section">
+          <div v-if="isOwner" class="registration-status">
+            <span class="badge badge-primary">Eres el organizador de esta actividad</span>
+          </div>
+
+          <template v-else>
+            <div v-if="isRegistered || isFull" class="registration-status">
+              <span v-if="isRegistered" class="badge badge-success">Ya estás inscrito</span>
+              <span v-else-if="isFull" class="badge badge-warning">Sin espacios disponibles</span>
+            </div>
+
+            <p v-if="registerMessage" class="success-message">{{ registerMessage }}</p>
+            <p v-if="registerError" class="error-message">{{ registerError }}</p>
+
+            <div class="registration-actions">
+              <NuxtLink v-if="!authStore.isAuthenticated" class="btn btn-secondary" to="/login">
+                Iniciá sesión para inscribirte
+              </NuxtLink>
+              <button
+                v-else-if="isRegistered"
+                type="button"
+                class="btn btn-danger"
+                :disabled="cancelling"
+                @click="askCancelRegistration"
+              >
+                {{ cancelling ? 'Cancelando...' : 'Cancelar inscripción' }}
+              </button>
+              <button v-else-if="isFull" type="button" class="btn" disabled>Sin espacios disponibles</button>
+              <button v-else type="button" class="btn" :disabled="registering" @click="handleRegister">
+                {{ registering ? 'Inscribiendo...' : 'Inscribirme' }}
+              </button>
+            </div>
+          </template>
+        </div>
+
         <div v-if="canManage" class="detail-actions">
           <NuxtLink class="btn" :to="`/events/${data.event._id}/edit`">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
@@ -135,6 +237,16 @@ const canManage = computed(
         </div>
       </div>
     </div>
+
+    <ConfirmDialog
+      :open="showCancelConfirm"
+      title="Cancelar inscripción"
+      :message="`¿Estás seguro de que quieres cancelar tu inscripción en “${data?.event.title}”?`"
+      confirm-text="Cancelar inscripción"
+      cancel-text="Volver"
+      @confirm="confirmCancelRegistration"
+      @cancel="closeCancelConfirm"
+    />
   </div>
 </template>
 
@@ -297,6 +409,22 @@ const canManage = computed(
   gap: 1rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border-color);
+}
+
+.registration-section {
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+  margin-bottom: 0.5rem;
+}
+
+.registration-status {
+  margin-bottom: 0.75rem;
+}
+
+.registration-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .badge-status--active,

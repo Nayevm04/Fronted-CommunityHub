@@ -23,6 +23,15 @@ export interface EventItem {
   organizer: EventOrganizer
   status: 'active' | 'completed' | 'cancelled'
   createdAt: string
+  // Cantidad de inscripciones actuales. Solo viene poblado en GET /events y GET /events/:id.
+  registeredCount?: number
+}
+
+export interface RegistrationItem {
+  _id: string
+  event: EventItem | null
+  user: string
+  createdAt: string
 }
 
 export interface CategoryItem {
