@@ -92,7 +92,13 @@ const confirmDelete = async () => {
             </td>
             <td>
               <div class="table-actions-group right">
-                <NuxtLink class="btn btn-secondary btn-sm" :to="`/events/${event._id}/edit`">Editar</NuxtLink>
+                <NuxtLink
+                  v-if="event.status !== 'completed'"
+                  class="btn btn-secondary btn-sm"
+                  :to="`/events/${event._id}/edit`"
+                >
+                  Editar
+                </NuxtLink>
                 <button class="btn btn-danger btn-sm" @click="askDelete(event)">Eliminar</button>
               </div>
             </td>

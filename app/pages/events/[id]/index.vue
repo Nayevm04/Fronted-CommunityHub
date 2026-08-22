@@ -12,7 +12,9 @@ const { data, pending, error } = await useAsyncData(`event-${route.params.id}`, 
 const isOwner = computed(
   () => authStore.user && data.value?.event.organizer?._id === authStore.user._id
 )
-const canManage = computed(() => isOwner.value || authStore.isAdmin)
+const canManage = computed(
+  () => (isOwner.value || authStore.isAdmin) && data.value?.event.status !== 'completed'
+)
 </script>
 
 <template>

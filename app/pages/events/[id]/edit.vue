@@ -11,6 +11,11 @@ const { data } = await useAsyncData(`event-edit-${route.params.id}`, () =>
   apiFetch<{ event: EventItem }>(`/events/${route.params.id}`)
 )
 
+// Una actividad finalizada no se puede editar; bloquea tambien el acceso directo por URL
+if (data.value?.event.status === 'completed') {
+  await navigateTo(`/events/${route.params.id}`)
+}
+
 const { data: categoriesData } = await useAsyncData('categories-for-event-edit', () =>
   apiFetch<{ categories: CategoryItem[] }>('/categories')
 )
@@ -61,7 +66,10 @@ const handleSubmit = async () => {
   }
 }
 
-const handleCancelEvent = async () => {
+const showCancelConfirm = ref(false)
+
+const confirmCancel = async () => {
+  showCancelConfirm.value = false
   errorMessage.value = ''
   try {
     await apiFetch(`/events/${route.params.id}`, { method: 'PUT', body: { status: 'cancelled' } })
@@ -170,20 +178,34 @@ const confirmDelete = async () => {
       </form>
     </div>
 
-    <!-- Danger Zone Card -->
-    <div class="card danger-zone-card">
-      <h3 class="danger-title">Zona de peligro</h3>
-      <p class="danger-desc">Acciones destructivas o de estado para esta actividad</p>
-      
-      <div class="danger-actions">
-        <button type="button" class="btn btn-secondary" @click="handleCancelEvent">
+    <div class="card actions-card">
+      <h3 class="actions-title">Acciones de la actividad</h3>
+      <p class="actions-desc">Gestioná el estado o eliminá esta actividad</p>
+
+      <div class="actions-row">
+        <button
+          v-if="data?.event.status === 'active'"
+          type="button"
+          class="btn btn-warning"
+          @click="showCancelConfirm = true"
+        >
           Marcar como cancelada
         </button>
         <button type="button" class="btn btn-danger" @click="showDeleteConfirm = true">
-          Eliminar actividad definitivamente
+          Eliminar actividad
         </button>
       </div>
     </div>
+
+    <ConfirmDialog
+      :open="showCancelConfirm"
+      title="Cancelar actividad"
+      :message="`¿Estás seguro de que quieres cancelar la actividad “${form.title}”?`"
+      cancel-text="Volver"
+      confirm-text="Confirmar cancelación"
+      @confirm="confirmCancel"
+      @cancel="showCancelConfirm = false"
+    />
 
     <ConfirmDialog
       :open="showDeleteConfirm"
@@ -275,33 +297,41 @@ const confirmDelete = async () => {
   border-top: 1px solid var(--border-color);
 }
 
-.danger-zone-card {
+.actions-card {
   max-width: 800px;
   margin: 0 auto;
   width: 100%;
-  border-color: #fecaca;
-  background-color: #fff5f5;
 }
 
-.danger-title {
-  color: #b91c1c;
+.actions-title {
   margin-bottom: 0.25rem;
 }
 
-.danger-desc {
-  color: #7f1d1d;
+.actions-desc {
+  color: var(--text-muted);
   font-size: 0.875rem;
   margin-bottom: 1.25rem;
 }
 
-.danger-actions {
+.actions-row {
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
 }
 
+.btn-warning {
+  background-color: var(--status-warning-bg);
+  color: var(--status-warning-text);
+  border-color: var(--status-warning-border);
+}
+
+.btn-warning:hover {
+  background-color: var(--status-warning-border);
+  color: var(--status-warning-text);
+}
+
 @media (max-width: 640px) {
-  .form-card, .danger-zone-card {
+  .form-card, .actions-card {
     padding: 1.25rem;
   }
   .form-grid-2 {

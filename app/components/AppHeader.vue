@@ -50,8 +50,22 @@ onMounted(() => {
             Notificaciones
             <span v-if="notificationsStore.unreadCount > 0" class="badge-dot">{{ notificationsStore.unreadCount }}</span>
           </NuxtLink>
-          <NuxtLink to="/profile" class="nav-link">Perfil</NuxtLink>
-          <span class="role-badge" :class="`role-badge--${authStore.role}`">{{ authStore.role }}</span>
+          <NuxtLink to="/profile" class="mini-profile">
+            <span class="mini-profile-avatar">
+              <img
+                v-if="authStore.user?.profileImage"
+                :src="getImageUrl(authStore.user.profileImage) ?? undefined"
+                alt="Foto de perfil"
+              />
+              <span v-else class="mini-profile-avatar-fallback">
+                {{ authStore.user?.firstName?.charAt(0) || 'U' }}
+              </span>
+            </span>
+            <span class="mini-profile-info">
+              <span class="mini-profile-name">{{ authStore.user?.firstName }} {{ authStore.user?.lastName }}</span>
+              <span class="role-badge" :class="`role-badge--${authStore.role}`">{{ authStore.role }}</span>
+            </span>
+          </NuxtLink>
           <button class="btn btn-secondary btn-sm" @click="handleLogout">Cerrar sesion</button>
         </template>
         <template v-else>
@@ -75,8 +89,6 @@ onMounted(() => {
 }
 
 .header-inner {
-  max-width: 1040px;
-  margin: 0 auto;
   padding: 0.85rem 1.25rem;
   display: flex;
   align-items: center;
@@ -161,18 +173,75 @@ onMounted(() => {
   line-height: 1;
 }
 
+.mini-profile {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.3rem 0.6rem 0.3rem 0.3rem;
+  border-radius: var(--radius-full);
+  text-decoration: none;
+}
+
+.mini-profile:hover {
+  background-color: var(--primary-subtle);
+}
+
+.mini-profile-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--primary-light);
+}
+
+.mini-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mini-profile-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mini-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  line-height: 1;
+}
+
+.mini-profile-name {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-main);
+}
+
 .role-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.2rem 0.55rem;
+  padding: 0.1rem 0.45rem;
   border-radius: var(--radius-full);
-  font-size: 0.725rem;
+  font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   background: var(--bg-muted);
   color: var(--text-muted);
   border: 1px solid var(--border-color);
+  width: fit-content;
 }
 
 .role-badge--admin {
