@@ -16,7 +16,11 @@ export default defineNuxtConfig({
       link: [
         { rel: 'icon', type: 'image/png', href: '/favicon.png' },
         { rel: 'shortcut icon', href: '/favicon.ico' },
-        { rel: 'manifest', href: '/manifest.webmanifest' },
+        // Solo se agrega fuera de dev: con devOptions.enabled en false, el service worker
+        // y el manifest no existen en dev, y este link causaba warnings de Vue Router.
+        ...(process.env.NODE_ENV !== 'development'
+          ? [{ rel: 'manifest', href: '/manifest.webmanifest' } as const]
+          : []),
       ],
       meta: [{ name: 'theme-color', content: '#4f46e5' }],
     },
@@ -37,7 +41,7 @@ export default defineNuxtConfig({
     // un reload manual (estrategia mas simple para este primer avance).
     registerType: 'autoUpdate',
     devOptions: {
-      enabled: true,
+      enabled: false,
     },
     manifest: {
       name: 'CommunityHub',
