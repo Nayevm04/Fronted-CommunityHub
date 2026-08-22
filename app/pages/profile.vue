@@ -2,6 +2,49 @@
 definePageMeta({ middleware: 'auth' })
 
 const authStore = useAuthStore()
+const { apiFetch } = useApi()
+
+const isEditing = ref(false)
+const errorMessage = ref('')
+const successMessage = ref('')
+const submitting = ref(false)
+
+const form = reactive({
+  firstName: authStore.user?.firstName ?? '',
+  lastName: authStore.user?.lastName ?? '',
+  profileImage: authStore.user?.profileImage ?? (null as string | null),
+})
+
+const startEditing = () => {
+  form.firstName = authStore.user?.firstName ?? ''
+  form.lastName = authStore.user?.lastName ?? ''
+  form.profileImage = authStore.user?.profileImage ?? null
+  errorMessage.value = ''
+  successMessage.value = ''
+  isEditing.value = true
+}
+
+const cancelEditing = () => {
+  isEditing.value = false
+  errorMessage.value = ''
+}
+
+const handleSubmit = async () => {
+  if (!authStore.user) return
+  errorMessage.value = ''
+  successMessage.value = ''
+  submitting.value = true
+  try {
+    await apiFetch(`/users/${authStore.user._id}`, { method: 'PUT', body: form })
+    await authStore.fetchCurrentUser()
+    successMessage.value = 'Perfil actualizado correctamente'
+    isEditing.value = false
+  } catch (error) {
+    errorMessage.value = getErrorMessage(error, 'No se pudo actualizar el perfil')
+  } finally {
+    submitting.value = false
+  }
+}
 </script>
 
 <template>
@@ -26,9 +69,38 @@ const authStore = useAuthStore()
             {{ authStore.user?.role }}
           </span>
         </div>
+
+        <button v-if="!isEditing" class="btn btn-secondary" style="margin-left: auto;" @click="startEditing">
+          Editar perfil
+        </button>
       </div>
 
-      <div class="profile-details-grid">
+      <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
+
+      <form v-if="isEditing" @submit.prevent="handleSubmit">
+        <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+
+        <div class="form-field">
+          <label for="firstName">Nombre</label>
+          <input id="firstName" v-model="form.firstName" type="text" required />
+        </div>
+
+        <div class="form-field">
+          <label for="lastName">Apellido</label>
+          <input id="lastName" v-model="form.lastName" type="text" required />
+        </div>
+
+        <ImageInput v-model="form.profileImage" label="Foto de perfil (opcional)" folder="profiles" />
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" @click="cancelEditing">Cancelar</button>
+          <button class="btn" type="submit" :disabled="submitting">
+            {{ submitting ? 'Guardando...' : 'Guardar cambios' }}
+          </button>
+        </div>
+      </form>
+
+      <div v-else class="profile-details-grid">
         <div class="detail-box">
           <span class="detail-label">Nombre completo</span>
           <p class="detail-value">{{ authStore.user?.firstName }} {{ authStore.user?.lastName }}</p>
