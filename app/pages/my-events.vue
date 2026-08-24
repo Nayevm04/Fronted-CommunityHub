@@ -81,7 +81,7 @@ const confirmDelete = async () => {
             <line x1="8" y1="2" x2="8" y2="6" />
             <line x1="3" y1="10" x2="21" y2="10" />
           </svg>
-          <span>{{ new Date(event.date).toLocaleDateString() }} — {{ event.hour }} HS</span>
+          <span>{{ formatEventDate(event.date) }} — {{ event.hour }} HS</span>
         </div>
 
         <div class="my-event-actions">
