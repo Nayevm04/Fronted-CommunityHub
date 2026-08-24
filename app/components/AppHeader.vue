@@ -34,7 +34,9 @@ onMounted(() => {
         <NuxtLink to="/events" class="nav-link">Actividades</NuxtLink>
 
         <template v-if="authStore.isAuthenticated">
+          <NuxtLink to="/dashboard" class="nav-link">Dashboard</NuxtLink>
           <NuxtLink to="/my-registrations" class="nav-link">Mis inscripciones</NuxtLink>
+          <NuxtLink to="/my-favorites" class="nav-link">Mis favoritos</NuxtLink>
           <NuxtLink v-if="authStore.isOrganizer" to="/my-events" class="nav-link">
             Mis actividades
           </NuxtLink>

@@ -3,9 +3,42 @@ import type { EventItem } from '~/types/models'
 
 const { apiFetch } = useApi()
 
-const { data, pending, error } = await useAsyncData('events-list', () =>
-  apiFetch<{ events: EventItem[] }>('/events')
+const filters = reactive({
+  search: '',
+  date: '',
+  location: '',
+  available: false,
+})
+
+const query = computed(() => {
+  const q: Record<string, string> = {}
+  if (filters.search.trim()) q.search = filters.search.trim()
+  if (filters.date) q.date = filters.date
+  if (filters.location.trim()) q.location = filters.location.trim()
+  if (filters.available) q.available = 'true'
+  return q
+})
+
+const hasActiveFilters = computed(() => Object.keys(query.value).length > 0)
+
+const clearFilters = () => {
+  filters.search = ''
+  filters.date = ''
+  filters.location = ''
+  filters.available = false
+}
+
+const { data, pending, error, refresh } = await useAsyncData('events-list', () =>
+  apiFetch<{ events: EventItem[] }>('/events', { query: query.value })
 )
+
+// Un solo debounce para todos los filtros: evita disparar una peticion por cada tecla
+// mientras se escribe en "search"/"location", y mantiene consistente el comportamiento de date/available.
+let filtersDebounce: ReturnType<typeof setTimeout> | undefined
+watch(filters, () => {
+  clearTimeout(filtersDebounce)
+  filtersDebounce = setTimeout(() => refresh(), 300)
+})
 </script>
 
 <template>
@@ -17,12 +50,50 @@ const { data, pending, error } = await useAsyncData('events-list', () =>
       </div>
     </div>
 
+    <div class="card filters-bar">
+      <div class="form-field">
+        <label for="filter-search">Buscar</label>
+        <input id="filter-search" v-model="filters.search" type="text" placeholder="Título o descripción..." />
+      </div>
+      <div class="form-field">
+        <label for="filter-date">Fecha</label>
+        <input id="filter-date" v-model="filters.date" type="date" />
+      </div>
+      <div class="form-field">
+        <label for="filter-location">Ubicación</label>
+        <input id="filter-location" v-model="filters.location" type="text" placeholder="Lugar..." />
+      </div>
+      <label class="filter-checkbox">
+        <input v-model="filters.available" type="checkbox" />
+        Solo con cupo disponible
+      </label>
+      <button
+        type="button"
+        class="btn btn-secondary btn-sm"
+        :disabled="!hasActiveFilters"
+        @click="clearFilters"
+      >
+        Limpiar filtros
+      </button>
+    </div>
+
     <div v-if="pending" class="state-container">
       <div class="spinner"></div>
       <p>Cargando actividades...</p>
     </div>
     <div v-else-if="error" class="error-message">
       No se pudieron cargar las actividades
+    </div>
+    <div v-else-if="!data?.events.length && hasActiveFilters" class="empty-state card">
+      <div class="empty-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="11" cy="11" r="7" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+      </div>
+      <h3>No se encontraron actividades con esos filtros</h3>
+      <p>Probá ajustar la búsqueda o limpiar los filtros.</p>
+      <button type="button" class="btn" style="margin-top: 1rem;" @click="clearFilters">Limpiar filtros</button>
     </div>
     <div v-else-if="!data?.events.length" class="empty-state card">
       <div class="empty-icon">
@@ -69,7 +140,7 @@ const { data, pending, error } = await useAsyncData('events-list', () =>
                 <line x1="8" y1="2" x2="8" y2="6" />
                 <line x1="3" y1="10" x2="21" y2="10" />
               </svg>
-              <span>{{ new Date(event.date).toLocaleDateString() }} - {{ event.hour }}</span>
+              <span>{{ formatEventDate(event.date) }} - {{ event.hour }}</span>
             </div>
 
             <div class="meta-item">
@@ -117,6 +188,34 @@ const { data, pending, error } = await useAsyncData('events-list', () =>
   color: var(--text-muted);
   font-size: 0.95rem;
   margin: 0;
+}
+
+.filters-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.filters-bar .form-field {
+  flex: 1 1 180px;
+  min-width: 160px;
+}
+
+.filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  padding-bottom: 0.6rem;
+}
+
+.filter-checkbox input {
+  width: 16px;
+  height: 16px;
 }
 
 .event-card {

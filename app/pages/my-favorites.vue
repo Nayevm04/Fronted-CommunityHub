@@ -1,45 +1,30 @@
 <script setup lang="ts">
-import type { RegistrationItem } from '~/types/models'
-
 definePageMeta({ middleware: 'auth' })
 
-const store = useRegistrationsStore()
-await store.fetchMyRegistrations()
+const store = useFavoritesStore()
+await store.fetchMyFavorites()
 
 const actionError = ref('')
-const cancelling = ref(false)
-const cancelTarget = ref<RegistrationItem | null>(null)
+const removingId = ref<string | null>(null)
 
-const askCancel = (registration: RegistrationItem) => {
+const removeFavorite = async (eventId: string) => {
   actionError.value = ''
-  cancelTarget.value = registration
-}
-
-const closeCancel = () => {
-  cancelTarget.value = null
-}
-
-const confirmCancel = async () => {
-  const eventId = cancelTarget.value?.event?._id
-  cancelTarget.value = null
-  if (!eventId) return
-
-  cancelling.value = true
-  const ok = await store.cancelRegistration(eventId)
-  cancelling.value = false
+  removingId.value = eventId
+  const ok = await store.removeFavorite(eventId)
+  removingId.value = null
   if (!ok) {
-    actionError.value = store.error || 'No se pudo cancelar la inscripción'
+    actionError.value = store.error || 'No se pudo quitar de favoritos'
   }
 }
 </script>
 
 <template>
-  <div class="my-registrations-page">
+  <div class="my-favorites-page">
     <div class="card card-header-flex">
       <div>
-        <h1 style="margin-bottom: 0.25rem;">Mis Inscripciones</h1>
+        <h1 style="margin-bottom: 0.25rem;">Mis Favoritos</h1>
         <p style="margin-bottom: 0; color: var(--text-muted); font-size: 0.9rem;">
-          Actividades comunitarias en las que estás inscrito
+          Actividades comunitarias que marcaste como favoritas
         </p>
       </div>
     </div>
@@ -48,96 +33,85 @@ const confirmCancel = async () => {
 
     <div v-if="store.loading" class="state-container">
       <div class="spinner"></div>
-      <p>Cargando tus inscripciones...</p>
+      <p>Cargando tus favoritos...</p>
     </div>
 
-    <div v-else-if="!store.registrations.length" class="empty-state card">
+    <div v-else-if="!store.favorites.length" class="empty-state card">
       <div class="empty-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
         </svg>
       </div>
-      <h3>Todavía no te inscribiste a ninguna actividad</h3>
-      <p>Explorá las actividades disponibles y sumate a la comunidad.</p>
+      <h3>Todavía no marcaste ninguna actividad como favorita</h3>
+      <p>Explorá las actividades disponibles y guardá las que más te interesen.</p>
       <NuxtLink class="btn" to="/events" style="margin-top: 1rem;">Ver actividades</NuxtLink>
     </div>
 
     <div v-else class="grid-cards">
       <div
-        v-for="registration in store.registrations"
-        :key="registration._id"
-        class="card my-registration-card"
+        v-for="favorite in store.favorites"
+        :key="favorite._id"
+        class="card my-favorite-card"
       >
-        <template v-if="registration.event">
-          <div class="my-registration-header">
-            <h2 class="my-registration-title">{{ registration.event.title }}</h2>
-            <span class="badge" :class="`badge-status--${registration.event.status}`">
-              {{ getStatusLabel(registration.event.status) }}
+        <template v-if="favorite.event">
+          <div class="my-favorite-header">
+            <h2 class="my-favorite-title">{{ favorite.event.title }}</h2>
+            <span class="badge" :class="`badge-status--${favorite.event.status}`">
+              {{ getStatusLabel(favorite.event.status) }}
             </span>
           </div>
 
-          <div class="my-registration-meta">
+          <div class="my-favorite-meta">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
               <line x1="16" y1="2" x2="16" y2="6" />
               <line x1="8" y1="2" x2="8" y2="6" />
               <line x1="3" y1="10" x2="21" y2="10" />
             </svg>
-            <span>{{ formatEventDate(registration.event.date) }} — {{ registration.event.hour }} HS</span>
+            <span>{{ formatEventDate(favorite.event.date) }} — {{ favorite.event.hour }} HS</span>
           </div>
 
-          <div class="my-registration-meta">
+          <div class="my-favorite-meta">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
               <circle cx="12" cy="10" r="3" />
             </svg>
-            <span>{{ registration.event.location }}</span>
+            <span>{{ favorite.event.location }}</span>
           </div>
 
-          <div class="my-registration-actions">
-            <NuxtLink class="btn btn-secondary btn-sm" :to="`/events/${registration.event._id}`">
+          <div class="my-favorite-actions">
+            <NuxtLink class="btn btn-secondary btn-sm" :to="`/events/${favorite.event._id}`">
               Ver detalle
             </NuxtLink>
             <button
-              v-if="registration.event.status === 'active'"
               type="button"
               class="btn btn-danger btn-sm"
-              :disabled="cancelling"
-              @click="askCancel(registration)"
+              :disabled="removingId === favorite.event._id"
+              @click="removeFavorite(favorite.event._id)"
             >
-              Cancelar inscripción
+              {{ removingId === favorite.event._id ? 'Quitando...' : 'Quitar de favoritos' }}
             </button>
           </div>
         </template>
       </div>
     </div>
-
-    <ConfirmDialog
-      :open="!!cancelTarget"
-      title="Cancelar inscripción"
-      :message="`¿Estás seguro de que quieres cancelar tu inscripción en “${cancelTarget?.event?.title}”?`"
-      confirm-text="Cancelar inscripción"
-      cancel-text="Volver"
-      @confirm="confirmCancel"
-      @cancel="closeCancel"
-    />
   </div>
 </template>
 
 <style scoped>
-.my-registrations-page {
+.my-favorites-page {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
 
-.my-registration-card {
+.my-favorite-card {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
 }
 
-.my-registration-header {
+.my-favorite-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -145,12 +119,12 @@ const confirmCancel = async () => {
   margin-bottom: 0.75rem;
 }
 
-.my-registration-title {
+.my-favorite-title {
   font-size: 1.15rem;
   margin: 0;
 }
 
-.my-registration-meta {
+.my-favorite-meta {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -159,14 +133,14 @@ const confirmCancel = async () => {
   margin-bottom: 0.5rem;
 }
 
-.my-registration-meta svg {
+.my-favorite-meta svg {
   width: 16px;
   height: 16px;
   color: var(--primary);
   flex-shrink: 0;
 }
 
-.my-registration-actions {
+.my-favorite-actions {
   display: flex;
   gap: 0.5rem;
   margin-top: auto;

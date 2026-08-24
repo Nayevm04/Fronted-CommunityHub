@@ -4,6 +4,7 @@ import type { EventItem } from '~/types/models'
 const route = useRoute()
 const authStore = useAuthStore()
 const registrationsStore = useRegistrationsStore()
+const favoritesStore = useFavoritesStore()
 const { apiFetch } = useApi()
 
 const { data, pending, error, refresh } = await useAsyncData(`event-${route.params.id}`, () =>
@@ -20,12 +21,28 @@ const canManage = computed(
 onMounted(() => {
   if (authStore.isAuthenticated) {
     registrationsStore.fetchMyRegistrations()
+    favoritesStore.fetchMyFavorites()
   }
 })
 
 const isRegistered = computed(
   () => !!data.value && registrationsStore.isRegistered(data.value.event._id)
 )
+const isFavorite = computed(
+  () => !!data.value && favoritesStore.isFavorite(data.value.event._id)
+)
+const togglingFavorite = ref(false)
+
+const toggleFavorite = async () => {
+  if (!data.value) return
+  togglingFavorite.value = true
+  if (isFavorite.value) {
+    await favoritesStore.removeFavorite(data.value.event._id)
+  } else {
+    await favoritesStore.addFavorite(data.value.event._id)
+  }
+  togglingFavorite.value = false
+}
 const availableSpots = computed(() => {
   if (!data.value) return 0
   return data.value.event.capacity - (data.value.event.registeredCount ?? 0)
@@ -120,6 +137,20 @@ const confirmCancelRegistration = async () => {
           <span v-if="data.event.category?.name" class="badge badge-primary">{{ data.event.category?.name }}</span>
           <span class="badge" :class="`badge-status--${data.event.status}`">{{ getStatusLabel(data.event.status) }}</span>
         </div>
+
+        <button
+          v-if="authStore.isAuthenticated"
+          type="button"
+          class="favorite-toggle"
+          :class="{ 'favorite-toggle--active': isFavorite }"
+          :disabled="togglingFavorite"
+          :title="isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'"
+          @click="toggleFavorite"
+        >
+          <svg viewBox="0 0 24 24" :fill="isFavorite ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
+            <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+          </svg>
+        </button>
       </div>
 
       <div class="detail-body">
@@ -137,7 +168,7 @@ const confirmCancelRegistration = async () => {
             </div>
             <div>
               <span class="info-label">Fecha y Hora</span>
-              <p class="info-value">{{ new Date(data.event.date).toLocaleDateString() }} — {{ data.event.hour }} HS</p>
+              <p class="info-value">{{ formatEventDate(data.event.date) }} — {{ data.event.hour }} HS</p>
             </div>
           </div>
 
@@ -325,6 +356,42 @@ const confirmCancelRegistration = async () => {
   right: 1rem;
   display: flex;
   gap: 0.5rem;
+}
+
+.favorite-toggle {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: color var(--transition-fast), transform var(--transition-fast);
+}
+
+.favorite-toggle:hover {
+  transform: scale(1.08);
+}
+
+.favorite-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.favorite-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+.favorite-toggle--active {
+  color: #e11d48;
 }
 
 .detail-body {

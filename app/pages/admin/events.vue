@@ -82,7 +82,7 @@ const confirmDelete = async () => {
             </td>
             <td>
               <span class="event-date">
-                {{ new Date(event.date).toLocaleDateString() }} — {{ event.hour }} HS
+                {{ formatEventDate(event.date) }} — {{ event.hour }} HS
               </span>
             </td>
             <td>
