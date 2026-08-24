@@ -17,3 +17,11 @@ export const isPastDateTime = (date: string, hour: string) => {
   if (!date || !hour) return false
   return combineLocalDateAndHour(date, hour).getTime() < Date.now()
 }
+
+// El backend guarda "date" como el dia calendario anclado a medianoche UTC (ver event.service.js).
+// Formatear con toLocaleDateString() normal convierte esa medianoche UTC a hora local del navegador
+// y en husos negativos (ej. Costa Rica, UTC-6) muestra el dia anterior. Forzamos timeZone: 'UTC'
+// para leer el mismo dia calendario que se eligio al crear/editar la actividad.
+export const formatEventDate = (date: string | Date) => {
+  return new Date(date).toLocaleDateString(undefined, { timeZone: 'UTC' })
+}

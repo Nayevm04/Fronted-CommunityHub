@@ -70,8 +70,10 @@ export default defineNuxtConfig({
             // subidas. Nunca /api/auth, /api/users, /api/notifications, ni categorias/uploads (mutaciones).
             runtimeCaching: [
               {
-                // GET /api/events y GET /api/events/:id (publicos, sin JWT)
-                urlPattern: new RegExp(`^${escapeRegExp(backendOrigin)}/api/events(/[^/]+)?$`),
+                // GET /api/events, GET /api/events/:id y GET /api/events?search=...&... (publicos, sin JWT).
+                // El grupo final "(\?.*)?" es necesario para que las peticiones con filtros/busqueda
+                // (querystring) tambien matcheen; sin el, cualquier URL con "?" quedaba fuera del cache.
+                urlPattern: new RegExp(`^${escapeRegExp(backendOrigin)}/api/events(/[^/]+)?(\\?.*)?$`),
                 handler: 'NetworkFirst',
                 options: {
                   cacheName: 'communityhub-events-api',
