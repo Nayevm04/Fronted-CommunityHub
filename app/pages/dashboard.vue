@@ -5,10 +5,19 @@ definePageMeta({ middleware: 'auth' })
 
 const authStore = useAuthStore()
 const { apiFetch } = useApi()
+const { isOnline } = useNetworkStatus()
+const offlineMessage = 'Esta sección no está disponible sin conexión a Internet.'
 
-const { data, pending, error } = await useAsyncData('dashboard', () =>
-  apiFetch<DashboardData>('/dashboard')
-)
+const { data, pending, error, refresh } = await useAsyncData('dashboard', () => {
+  if (import.meta.client && !isOnline.value) return null
+  return apiFetch<DashboardData>('/dashboard')
+})
+
+if (import.meta.client) {
+  watch(isOnline, (online) => {
+    if (online) refresh()
+  })
+}
 </script>
 
 <template>
@@ -25,6 +34,9 @@ const { data, pending, error } = await useAsyncData('dashboard', () =>
     <div v-if="pending" class="state-container">
       <div class="spinner"></div>
       <p>Cargando dashboard...</p>
+    </div>
+    <div v-else-if="!isOnline" class="error-message">
+      {{ offlineMessage }}
     </div>
     <div v-else-if="error" class="error-message">
       No se pudo cargar el dashboard

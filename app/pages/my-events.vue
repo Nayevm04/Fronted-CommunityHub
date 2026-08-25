@@ -5,12 +5,21 @@ definePageMeta({ middleware: 'organizer' })
 
 const authStore = useAuthStore()
 const { apiFetch } = useApi()
+const { isOnline } = useNetworkStatus()
+const offlineMessage = 'Esta sección no está disponible sin conexión a Internet.'
 
-const { data, pending, refresh } = await useAsyncData('my-events', () =>
-  apiFetch<{ events: EventItem[] }>('/events', {
+const { data, pending, refresh } = await useAsyncData('my-events', () => {
+  if (import.meta.client && !isOnline.value) return null
+  return apiFetch<{ events: EventItem[] }>('/events', {
     query: { organizer: authStore.user?._id },
   })
-)
+})
+
+if (import.meta.client) {
+  watch(isOnline, (online) => {
+    if (online) refresh()
+  })
+}
 
 const errorMessage = ref('')
 const deleteTarget = ref<EventItem | null>(null)
@@ -54,6 +63,11 @@ const confirmDelete = async () => {
     <div v-if="pending" class="state-container">
       <div class="spinner"></div>
       <p>Cargando tus actividades...</p>
+    </div>
+
+    <div v-else-if="!isOnline" class="empty-state card">
+      <h3>Sección no disponible sin conexión</h3>
+      <p>{{ offlineMessage }}</p>
     </div>
 
     <div v-else-if="!data?.events.length" class="empty-state card">

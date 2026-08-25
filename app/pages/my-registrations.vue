@@ -4,7 +4,20 @@ import type { RegistrationItem } from '~/types/models'
 definePageMeta({ middleware: 'auth' })
 
 const store = useRegistrationsStore()
-await store.fetchMyRegistrations()
+const { isOnline } = useNetworkStatus()
+const offlineMessage = 'Esta sección no está disponible sin conexión a Internet.'
+
+if (isOnline.value) {
+  await store.fetchMyRegistrations()
+} else {
+  store.error = offlineMessage
+}
+
+if (import.meta.client) {
+  watch(isOnline, (online) => {
+    if (online) store.fetchMyRegistrations()
+  })
+}
 
 const actionError = ref('')
 const cancelling = ref(false)
@@ -49,6 +62,11 @@ const confirmCancel = async () => {
     <div v-if="store.loading" class="state-container">
       <div class="spinner"></div>
       <p>Cargando tus inscripciones...</p>
+    </div>
+
+    <div v-else-if="!isOnline" class="empty-state card">
+      <h3>Sección no disponible sin conexión</h3>
+      <p>{{ offlineMessage }}</p>
     </div>
 
     <div v-else-if="!store.registrations.length" class="empty-state card">
