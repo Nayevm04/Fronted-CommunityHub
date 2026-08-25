@@ -79,11 +79,14 @@ export const useAuthStore = defineStore('auth', {
     // Recupera la sesion consultando /api/auth/me con el token guardado
     async fetchCurrentUser() {
       if (!this.token) return
+      if (import.meta.client && !navigator.onLine) return
+
       const { apiFetch } = useApi()
       try {
         const data = await apiFetch<{ user: AuthUser }>('/auth/me')
         this.user = data.user
       } catch {
+        if (import.meta.client && !navigator.onLine) return
         this.clearSession()
       }
     },
