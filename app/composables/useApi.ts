@@ -5,12 +5,22 @@ export const useApi = () => {
 
   const apiFetch = $fetch.create({
     baseURL: config.public.apiBase,
-    onRequest({ options }) {
-      // Sin conexion solo se puede consultar; las mutaciones se cortan antes de llegar al backend
+    onRequest({ request, options }) {
+      // Offline solo se permite consultar actividades, porque esas respuestas estan cacheadas por la PWA.
       const method = (options.method ?? 'GET').toString().toUpperCase()
-      if (import.meta.client && !navigator.onLine && method !== 'GET') {
+      if (import.meta.client && !navigator.onLine) {
+        const path = request.toString()
+        const canUseOfflineCache = method === 'GET' && path.startsWith('/events')
+
+        if (canUseOfflineCache) return
+
         const offlineError = new Error('Sin conexión') as Error & { data?: { message: string } }
-        offlineError.data = { message: 'Necesitás conexión a internet para realizar esta acción.' }
+        offlineError.data = {
+          message:
+            method === 'GET'
+              ? 'Esta información no está disponible sin conexión.'
+              : 'Necesitás conexión a internet para realizar esta acción.',
+        }
         throw offlineError
       }
 

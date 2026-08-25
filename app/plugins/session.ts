@@ -6,6 +6,12 @@ export default defineNuxtPlugin(async () => {
 
   if (tokenCookie.value && !authStore.user) {
     authStore.token = tokenCookie.value
+
+    if (import.meta.client && !navigator.onLine) {
+      window.addEventListener('online', () => authStore.fetchCurrentUser(), { once: true })
+      return
+    }
+
     await authStore.fetchCurrentUser()
   }
 })

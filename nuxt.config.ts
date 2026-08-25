@@ -41,6 +41,12 @@ export default defineNuxtConfig({
       apiBase: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api',
     },
   },
+  nitro: {
+    prerender: {
+      // Rutas publicas que forman el "cascaron" inicial de la app para poder abrirla offline.
+      routes: ['/', '/events', '/login', '/register'],
+    },
+  },
   ...(!isDev
     ? {
         pwa: {
@@ -64,8 +70,15 @@ export default defineNuxtConfig({
             ],
           },
           workbox: {
-            // Precachea el build (JS/CSS/iconos) generado por Nuxt
-            globPatterns: ['**/*.{js,css,ico,png,svg,woff2}'],
+            // Precachea el build y las entradas HTML/JSON prerenderizadas para que la app
+            // pueda abrirse o recargarse offline y luego resolver la ruta con Vue Router.
+            globPatterns: ['**/*.{js,css,html,json,ico,png,svg,woff2}'],
+            navigateFallback: '/',
+            navigateFallbackDenylist: [
+              /^\/api\//,
+              /^\/uploads\//,
+              /^\/manifest\.webmanifest$/,
+            ],
             // Solo se cachean respuestas publicas y no sensibles: consulta de actividades e imagenes
             // subidas. Nunca /api/auth, /api/users, /api/notifications, ni categorias/uploads (mutaciones).
             runtimeCaching: [

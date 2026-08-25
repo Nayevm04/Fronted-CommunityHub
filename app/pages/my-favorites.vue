@@ -2,7 +2,20 @@
 definePageMeta({ middleware: 'auth' })
 
 const store = useFavoritesStore()
-await store.fetchMyFavorites()
+const { isOnline } = useNetworkStatus()
+const offlineMessage = 'Esta sección no está disponible sin conexión a Internet.'
+
+if (isOnline.value) {
+  await store.fetchMyFavorites()
+} else {
+  store.error = offlineMessage
+}
+
+if (import.meta.client) {
+  watch(isOnline, (online) => {
+    if (online) store.fetchMyFavorites()
+  })
+}
 
 const actionError = ref('')
 const removingId = ref<string | null>(null)
@@ -34,6 +47,11 @@ const removeFavorite = async (eventId: string) => {
     <div v-if="store.loading" class="state-container">
       <div class="spinner"></div>
       <p>Cargando tus favoritos...</p>
+    </div>
+
+    <div v-else-if="!isOnline" class="empty-state card">
+      <h3>Sección no disponible sin conexión</h3>
+      <p>{{ offlineMessage }}</p>
     </div>
 
     <div v-else-if="!store.favorites.length" class="empty-state card">

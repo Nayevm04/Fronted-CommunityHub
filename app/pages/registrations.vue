@@ -5,10 +5,19 @@ definePageMeta({ middleware: 'event-manager' })
 
 const authStore = useAuthStore()
 const { apiFetch } = useApi()
+const { isOnline } = useNetworkStatus()
+const offlineMessage = 'Esta sección no está disponible sin conexión a Internet.'
 
-const { data, pending, error } = await useAsyncData('registrations', () =>
-  apiFetch<{ registrations: RegistrationDetailItem[] }>('/registrations')
-)
+const { data, pending, error, refresh } = await useAsyncData('registrations', () => {
+  if (import.meta.client && !isOnline.value) return null
+  return apiFetch<{ registrations: RegistrationDetailItem[] }>('/registrations')
+})
+
+if (import.meta.client) {
+  watch(isOnline, (online) => {
+    if (online) refresh()
+  })
+}
 </script>
 
 <template>
@@ -29,6 +38,9 @@ const { data, pending, error } = await useAsyncData('registrations', () =>
     <div v-if="pending" class="state-container">
       <div class="spinner"></div>
       <p>Cargando inscripciones...</p>
+    </div>
+    <div v-else-if="!isOnline" class="error-message">
+      {{ offlineMessage }}
     </div>
     <div v-else-if="error" class="error-message">
       No se pudieron cargar las inscripciones

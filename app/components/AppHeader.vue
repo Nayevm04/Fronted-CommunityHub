@@ -9,7 +9,7 @@ const handleLogout = async () => {
 }
 
 onMounted(() => {
-  if (authStore.isAuthenticated) {
+  if (authStore.isAuthenticated && navigator.onLine) {
     notificationsStore.fetchNotifications()
   }
 })
